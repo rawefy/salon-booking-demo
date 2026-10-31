@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Демо — чат-бот записи в салон красоты</title>
+<style>
+  :root {
+    --bg: #0e1621;
+    --bg-chat: #17212b;
+    --bubble-bot: #182533;
+    --bubble-user: #2b5278;
+    --accent: #5aa9e6;
+    --accent-2: #7c5cff;
+    --text: #e8eef4;
+    --text-dim: #8b9cb0;
+    --btn: #2b3b4d;
+    --btn-hover: #354a61;
+    --panel: #111a24;
+    --ok: #4cc38a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: radial-gradient(1200px 600px at 80% -10%, #1b2a3d 0%, var(--bg) 55%);
+    min-height: 100vh; color: var(--text);
+    display: flex; flex-direction: column; align-items: center;
+  }
+
+  header.top {
+    width: 100%; max-width: 980px;
+    padding: 18px 20px 10px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  .top h1 { font-size: 18px; font-weight: 600; }
+  .top h1 span { color: var(--accent); }
+  .demo-badge {
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+    color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .5px;
+    padding: 5px 12px; border-radius: 999px; text-transform: uppercase;
+  }
+
+  .layout {
+    width: 100%; max-width: 980px;
+    display: grid; grid-template-columns: 300px 1fr; gap: 18px;
+    padding: 8px 20px 30px;
+  }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+
+  /* ---------- Side panel ---------- */
+  .panel {
+    background: var(--panel); border: 1px solid #1f2c3a; border-radius: 16px;
+    padding: 16px; height: fit-content;
+  }
+  .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--text-dim); margin-bottom: 10px; }
+  .panel label { font-size: 12px; color: var(--text-dim); display: block; margin: 10px 0 4px; }
+  .panel input {
+    width: 100%; background: #0d151e; border: 1px solid #24384c; color: var(--text);
+    border-radius: 10px; padding: 9px 11px; font-size: 14px; outline: none;
+  }
+  .panel input:focus { border-color: var(--accent); }
+  .panel .apply {
+    margin-top: 14px; width: 100%; border: none; cursor: pointer;
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+    color: #fff; font-weight: 600; font-size: 14px; padding: 10px; border-radius: 10px;
+  }
+  .panel .apply:hover { filter: brightness(1.1); }
+  .panel .hint { font-size: 12px; color: var(--text-dim); margin-top: 12px; line-height: 1.5; }
+  .panel .hint b { color: var(--text); }
+  .lead-card {
+    margin-top: 16px; border-top: 1px dashed #2a3d52; padding-top: 14px;
+  }
+  .lead-card .lead-box {
+    background: #0d1a12; border: 1px solid #1e4630; border-radius: 12px;
+    padding: 12px; font-size: 13px; line-height: 1.55; white-space: pre-wrap;
+    color: #cdeeda; display: none;
+  }
+  .lead-card .lead-box.show { display: block; animation: pop .3s ease; }
+  .lead-card .lead-title { font-size: 12px; color: var(--ok); font-weight: 700; margin-bottom: 6px; display: none; }
+  .lead-card .lead-title.show { display: block; }
+  .lead-card .lead-status { font-size: 12px; font-weight: 700; margin-top: 8px; display: none; }
+  .lead-card .lead-status.show { display: block; animation: pop .3s ease; }
+  .lead-card .lead-status.pending { color: #e5b567; }
+  .lead-card .lead-status.confirmed { color: var(--ok); }
+  .lead-card .lead-status.cancelled { color: #e06c75; }
+  .lead-card .lead-status.moved { color: var(--accent); }
+  .lead-actions { display: none; gap: 6px; margin-top: 10px; }
+  .lead-actions.show { display: flex; animation: pop .3s ease; }
+  .lead-actions button {
+    flex: 1; border: none; cursor: pointer; border-radius: 9px;
+    padding: 8px 4px; font-size: 12px; font-weight: 700; color: #fff;
+  }
+  .lead-actions .b-ok { background: #1e6b44; }
+  .lead-actions .b-ok:hover { background: #268457; }
+  .lead-actions .b-move { background: #2b5278; }
+  .lead-actions .b-move:hover { background: #38689a; }
+  .lead-actions .b-no { background: #7a2e35; }
+  .lead-actions .b-no:hover { background: #973a43; }
+
+  /* ---------- Calendar ---------- */
+  .cal-card { margin-top: 16px; border-top: 1px dashed #2a3d52; padding-top: 14px; }
+  .cal-empty { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+  .cal-events { display: flex; flex-direction: column; gap: 8px; }
+  .cal-event {
+    background: #0d151e; border-left: 4px solid var(--accent); border-radius: 10px;
+    padding: 9px 11px; font-size: 12.5px; line-height: 1.5; animation: pop .35s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  }
+  .cal-event .cal-title { font-weight: 700; color: var(--text); }
+  .cal-event .cal-meta { color: var(--text-dim); }
+  .cal-event .cal-badge {
+    display: inline-block; font-size: 10px; font-weight: 700; color: var(--ok);
+    border: 1px solid #1e4630; border-radius: 999px; padding: 1px 8px; margin-top: 4px;
+  }
+  .cal-event .cal-cancel {
+    display: block; margin-top: 7px; background: #7a2e35; color: #fff; border: none;
+    cursor: pointer; border-radius: 8px; padding: 5px 10px; font-size: 11px; font-weight: 700;
+  }
+  .cal-event .cal-cancel:hover { background: #973a43; }
+
+  /* ---------- Phone / chat ---------- */
+  .phone {
+    background: var(--bg-chat); border: 1px solid #1f2c3a; border-radius: 22px;
+    overflow: hidden; display: flex; flex-direction: column;
+    height: 640px; max-height: calc(100vh - 140px);
+    box-shadow: 0 24px 60px rgba(0,0,0,.45);
+  }
+  .chat-header {
+    background: var(--bubble-bot); padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #101820;
+  }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%; flex: none;
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; color: #fff;
+  }
+  .chat-header .name { font-weight: 600; font-size: 15px; }
+  .chat-header .status { font-size: 12px; color: var(--accent); }
+  .chat-header .restart {
+    margin-left: auto; background: var(--btn); color: var(--text); border: none; cursor: pointer;
+    font-size: 12px; padding: 7px 12px; border-radius: 8px;
+  }
+  .chat-header .restart:hover { background: var(--btn-hover); }
+
+  .chat-body {
+    flex: 1; overflow-y: auto; padding: 16px 14px 8px;
+    display: flex; flex-direction: column; gap: 8px;
+    background:
+      radial-gradient(600px 300px at 10% 0%, rgba(90,169,230,.05), transparent 60%),
+      var(--bg-chat);
+  }
+  .chat-body::-webkit-scrollbar { width: 6px; }
+  .chat-body::-webkit-scrollbar-thumb { background: #2a3d52; border-radius: 3px; }
+
+  .msg {
+    max-width: 82%; padding: 9px 12px; border-radius: 14px;
+    font-size: 14.5px; line-height: 1.45; white-space: pre-wrap; word-break: break-word;
+    animation: pop .22s ease;
+  }
+  @keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .msg.bot { background: var(--bubble-bot); align-self: flex-start; border-bottom-left-radius: 4px; }
+  .msg.user { background: var(--bubble-user); align-self: flex-end; border-bottom-right-radius: 4px; }
+  .msg .time { display: block; text-align: right; font-size: 10.5px; color: var(--text-dim); margin-top: 3px; }
+  .msg.user .time { color: #b9cfe4; }
+
+  .typing { display: inline-flex; gap: 4px; padding: 12px 14px; background: var(--bubble-bot);
+    border-radius: 14px; border-bottom-left-radius: 4px; align-self: flex-start; }
+  .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); animation: blink 1.2s infinite; }
+  .typing i:nth-child(2) { animation-delay: .2s; }
+  .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%, 60%, 100% { opacity: .3; } 30% { opacity: 1; } }
+
+  .kb { display: flex; flex-wrap: wrap; gap: 6px; align-self: flex-start; max-width: 92%; animation: pop .25s ease; }
+  .kb button {
+    background: var(--btn); color: var(--accent); border: none; cursor: pointer;
+    padding: 8px 13px; border-radius: 10px; font-size: 13.5px; font-weight: 500;
+    transition: background .15s;
+  }
+  .kb button:hover { background: var(--btn-hover); }
+  .kb button.wide { width: 100%; text-align: center; }
+  .kb button.ok { color: var(--ok); }
+
+  .chat-input {
+    display: flex; gap: 8px; padding: 10px 12px; background: var(--bubble-bot); border-top: 1px solid #101820;
+  }
+  .chat-input input {
+    flex: 1; background: #0d151e; border: 1px solid #24384c; border-radius: 999px;
+    color: var(--text); padding: 10px 16px; font-size: 14px; outline: none;
+  }
+  .chat-input input:focus { border-color: var(--accent); }
+  .chat-input .send {
+    width: 42px; height: 42px; border-radius: 50%; border: none; cursor: pointer;
+    background: var(--accent); color: #fff; font-size: 17px; display: flex; align-items: center; justify-content: center;
+  }
+  .chat-input .send:hover { filter: brightness(1.12); }
+
+  /* ---------- Schedule editor ---------- */
+  .sched-card { margin-top: 16px; border-top: 1px dashed #2a3d52; padding-top: 14px; }
+  .sched-card select {
+    width: 100%; background: #0d151e; border: 1px solid #24384c; color: var(--text);
+    border-radius: 10px; padding: 8px 10px; font-size: 13.5px; outline: none; margin-bottom: 8px;
+  }
+  .sched-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .sched-nav span { font-size: 13px; font-weight: 600; }
+  .sched-nav button {
+    background: var(--btn); color: var(--text); border: none; cursor: pointer;
+    border-radius: 8px; padding: 4px 10px; font-size: 13px;
+  }
+  .sched-nav button:hover { background: var(--btn-hover); }
+  .sched-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .sched-grid .wd { text-align: center; font-size: 10px; color: var(--text-dim); padding: 2px 0; }
+  .sched-grid .day {
+    text-align: center; font-size: 11.5px; padding: 5px 0; border-radius: 7px;
+    cursor: pointer; background: #12301f; color: #9fdcb8; border: 1px solid #1e4630;
+  }
+  .sched-grid .day.off { background: #141c26; color: #55677c; border-color: #22303f; }
+  .sched-grid .day.past { opacity: .35; cursor: default; }
+  .sched-grid .day.today { outline: 2px solid var(--accent); }
+  .sched-grid .day.empty { background: none; border: none; cursor: default; }
+  .sched-legend { font-size: 11px; color: var(--text-dim); margin-top: 8px; line-height: 1.5; }
+
+  footer.note {
+    max-width: 980px; width: 100%; padding: 0 20px 26px;
+    color: var(--text-dim); font-size: 12.5px; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>Чат-бот онлайн-записи <span>для салонов красоты</span></h1>
+  <div class="demo-badge">Демо</div>
+</header>
+
+<div class="layout">
+  <aside class="panel">
+    <h2>Настройка демо</h2>
+    <label>Название салона</label>
+    <input id="cfgSalon" type="text" placeholder="Например: Чародейка">
+    <label>Адрес</label>
+    <input id="cfgAddr" type="text" placeholder="ул. Республиканская, 25">
+    <button class="apply" id="applyCfg">Персонализировать</button>
+    <div class="hint">
+      Впишите название и адрес салона клиента — бот перезапустится с его данными. Удобно показывать «их» бота прямо во время звонка.<br><br>
+      <b>Подсказка:</b> параметры можно передать и ссылкой: <code>?salon=Чародейка</code>
+    </div>
+    <div class="sched-card">
+      <h2>🗓 График мастеров</h2>
+      <select id="schedMaster"></select>
+      <div class="sched-nav">
+        <button id="schedPrev">←</button>
+        <span id="schedMonth"></span>
+        <button id="schedNext">→</button>
+      </div>
+      <div class="sched-grid" id="schedGrid"></div>
+      <div class="sched-legend">Клик по дню переключает: рабочий ⇄ выходной.<br>Бот предложит клиенту только рабочие дни мастера. График можно заполнить на месяцы вперёд.</div>
+    </div>
+    <div class="lead-card">
+      <h2>Панель администратора</h2>
+      <div class="lead-title" id="leadTitle">🔔 Новая заявка — уведомление в Telegram администратора:</div>
+      <div class="lead-box" id="leadBox"></div>
+      <div class="lead-actions" id="leadActions">
+        <button class="b-ok" id="leadConfirm">✅ Подтвердить</button>
+        <button class="b-move" id="leadMove">↺ Перенести</button>
+        <button class="b-no" id="leadCancel">❌ Отменить</button>
+      </div>
+      <div class="lead-status" id="leadStatus"></div>
+    </div>
+    <div class="cal-card">
+      <h2>📆 Google Календарь салона</h2>
+      <div class="cal-empty" id="calEmpty">Подтверждённые записи появятся здесь автоматически</div>
+      <div class="cal-events" id="calEvents"></div>
+    </div>
+  </aside>
+
+  <div class="phone">
+    <div class="chat-header">
+      <div class="avatar" id="avatarLetter">Б</div>
+      <div>
+        <div class="name" id="salonName">Салон «Ваша красота» — бот записи</div>
+        <div class="status">бот · онлайн</div>
+      </div>
+      <button class="restart" id="restartBtn">↺ Начать заново</button>
+    </div>
+    <div class="chat-body" id="chat"></div>
+    <div class="chat-input">
+      <input id="textInput" type="text" placeholder="Сообщение..." autocomplete="off">
+      <button class="send" id="sendBtn">➤</button>
+    </div>
+  </div>
+</div>
+
+<footer class="note">
+  Это демонстрационный сценарий: услуги, мастера, цены и расписание — пример. Гибридная схема: клиент сразу получает предварительную запись,
+  администратор подтверждает одной кнопкой в Telegram — и запись автоматически попадает в Google Календарь салона. В рабочей версии бот также
+  напоминает клиенту о визите, умеет переносить и отменять записи и автоподтверждает заявку, если администратор не ответил вовремя.
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ================= CONFIG ================= */
+  var config = {
+    salon: 'Салон «Ваша красота»',
+    address: 'ул. Примерная, 1',
+    hours: 'Пн–Пт 9:00–20:00, Сб–Вс 9:00–19:00',
+    phone: '+7 (831) 000-00-00',
+    services: [
+      { name: '💇‍♀️ Женская стрижка', price: 1200, dur: 60 },
+      { name: '💇‍♂️ Мужская стрижка', price: 800, dur: 45 },
+      { name: '🎨 Окрашивание', price: 3500, dur: 120 },
+      { name: '💅 Маникюр с покрытием', price: 1800, dur: 90 },
+      { name: '🦶 Педикюр', price: 2200, dur: 90 },
+      { name: '🤲 Массаж лица', price: 1500, dur: 45 }
+    ],
+    masters: ['Анна', 'Мария', 'Екатерина', 'Любой мастер']
+  };
+
+  /* URL params: ?salon=...&addr=... */
+  var q = new URLSearchParams(location.search);
+  if (q.get('salon')) config.salon = 'Салон «' + q.get('salon').replace(/[«»]/g, '') + '»';
+  if (q.get('addr')) config.address = q.get('addr');
+
+  var state = {};            // booking draft
+  var awaitingInput = null;  // 'name' | 'phone' | null
+  var busy = false;
+
+  var chat = document.getElementById('chat');
+  var input = document.getElementById('textInput');
+
+  function now() {
+    var d = new Date();
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+  function scroll() { chat.scrollTop = chat.scrollHeight; }
+
+  function addMsg(text, who) {
+    var m = document.createElement('div');
+    m.className = 'msg ' + who;
+    m.textContent = text;
+    var t = document.createElement('span');
+    t.className = 'time'; t.textContent = now();
+    m.appendChild(t);
+    chat.appendChild(m);
+    scroll();
+    return m;
+  }
+
+  function addButtons(buttons) {
+    var kb = document.createElement('div');
+    kb.className = 'kb';
+    buttons.forEach(function (b) {
+      var btn = document.createElement('button');
+      btn.innerHTML = b.label;
+      if (b.wide) btn.className = 'wide';
+      if (b.ok) btn.classList.add('ok');
+      btn.addEventListener('click', function () {
+        kb.remove();
+        if (b.echo !== false) addMsg(b.echoText || b.label.replace(/<[^>]+>/g, ''), 'user');
+        b.action();
+      });
+      kb.appendChild(btn);
+    });
+    chat.appendChild(kb);
+    scroll();
+  }
+
+  function typing(cb, delay) {
+    var t = document.createElement('div');
+    t.className = 'typing';
+    t.innerHTML = '<i></i><i></i><i></i>';
+    chat.appendChild(t); scroll();
+    setTimeout(function () { t.remove(); cb(); }, delay || 700);
+  }
+
+  function botSay(text, buttons, delay) {
+    busy = true;
+    typing(function () {
+      addMsg(text, 'bot');
+      if (buttons && buttons.length) addButtons(buttons);
+      busy = false;
+    }, delay);
+  }
+
+  function fmtPrice(p) { return p.toLocaleString('ru-RU') + ' ₽'; }
+
+  function nextDays(n) {
+    var days = [], d = new Date();
+    var wd = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+    var mo = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+    for (var i = 0; i < n; i++) {
+      var x = new Date(d); x.setDate(d.getDate() + i);
+      days.push({
+        label: wd[x.getDay()] + ', ' + x.getDate() + ' ' + mo[x.getMonth()],
+        key: x.getFullYear() + '-' + ('0' + (x.getMonth() + 1)).slice(-2) + '-' + ('0' + x.getDate()).slice(-2),
+        today: i === 0
+      });
+    }
+    return days;
+  }
+
+  function timeSlots(dateKey, master) {
+    /* deterministic pseudo-random busy slots per date */
+    var seed = 0;
+    for (var i = 0; i < dateKey.length; i++) seed = (seed * 31 + dateKey.charCodeAt(i)) % 997;
+    var slots = [];
+    var nowD = new Date();
+    var isToday = dateKey === (nowD.getFullYear() + '-' + ('0' + (nowD.getMonth() + 1)).slice(-2) + '-' + ('0' + nowD.getDate()).slice(-2));
+    for (var h = 9; h <= 18; h++) {
+      var label = ('0' + h).slice(-2) + ':00';
+      seed = (seed * 31 + h) % 997;
+      var busySlot = (seed % 5 === 0);
+      var past = isToday && h <= nowD.getHours();
+      var taken = slotTaken(dateKey, master, label);
+      if (!busySlot && !past && !taken) slots.push(label);
+    }
+    if (!slots.length) slots.push('—');
+    return slots;
+  }
+
+  /* слот уже занят активной записью этого мастера? */
+  function slotTaken(dateKey, master, time) {
+    return bookings.some(function (b) {
+      return b.status !== 'cancelled' &&
+        b.dkey === dateKey &&
+        b.time === time &&
+        (b.master === master || master === 'Любой мастер' || b.master === 'Любой мастер');
+    });
+  }
+
+  /* ================= FLOW ================= */
+
+  function start() {
+    chat.innerHTML = '';
+    document.getElementById('leadBox').className = 'lead-box';
+    document.getElementById('leadTitle').className = 'lead-title';
+    document.getElementById('leadActions').className = 'lead-actions';
+    document.getElementById('leadStatus').className = 'lead-status';
+    currentLead = null;
+    bookings.length = 0;
+    renderCalendar();
+    state = {};
+    awaitingInput = null;
+    botSay(
+      'Здравствуйте! 👋\nЯ — бот записи ' + config.salon + '.\nПомогу выбрать услугу, мастера и удобное время — без звонков и ожидания.',
+      null, 500
+    );
+    setTimeout(mainMenu, 1500);
+  }
+
+  function mainMenu() {
+    botSay('Что вас интересует?', [
+      { label: '📅 Записаться', wide: true, action: chooseService },
+      { label: '📋 Мои записи', wide: true, action: showMyBookings },
+      { label: '💰 Услуги и цены', wide: true, action: showPrices },
+      { label: '👩‍🎨 Наши мастера', wide: true, action: showMasters },
+      { label: '📍 Контакты и адрес', wide: true, action: showContacts }
+    ]);
+  }
+
+  function showPrices() {
+    var lines = config.services.map(function (s) {
+      return s.name + ' — ' + fmtPrice(s.price) + ' (' + s.dur + ' мин)';
+    });
+    botSay('Наши услуги:\n\n' + lines.join('\n'), [
+      { label: '📅 Записаться', wide: true, ok: true, action: chooseService },
+      { label: '← Главное меню', wide: true, action: mainMenu }
+    ], 900);
+  }
+
+  function showMasters() {
+    botSay(
+      'Наша команда:\n\n' +
+      '⭐ Анна — топ-стилист, стаж 12 лет\n' +
+      '⭐ Мария — мастер маникюра, стаж 8 лет\n' +
+      '⭐ Екатерина — колорист, стаж 9 лет',
+      [
+        { label: '📅 Записаться', wide: true, ok: true, action: chooseService },
+        { label: '← Главное меню', wide: true, action: mainMenu }
+      ], 900
+    );
+  }
+
+  function showContacts() {
+    botSay(
+      '📍 ' + config.address + '\n🕒 ' + config.hours + '\n📞 ' + config.phone + '\n\nЖдём вас!',
+      [
+        { label: '📅 Записаться', wide: true, ok: true, action: chooseService },
+        { label: '← Главное меню', wide: true, action: mainMenu }
+      ], 800
+    );
+  }
+
+  function chooseService() {
+    botSay('Выберите услугу:', config.services.map(function (s) {
+      return {
+        label: s.name + ' · ' + fmtPrice(s.price),
+        wide: true,
+        action: function () { state.service = s; chooseMaster(); }
+      };
+    }), 600);
+  }
+
+  function chooseMaster() {
+    botSay('К кому хотите записаться?', config.masters.map(function (m) {
+      return {
+        label: '⭐ ' + m,
+        wide: true,
+        action: function () { state.master = m; chooseDate(); }
+      };
+    }), 600);
+  }
+
+  function chooseDate() {
+    var days = nextDays(14).filter(function (d) { return isWorkDay(state.master, d.key); });
+    if (!days.length) {
+      botSay('К сожалению, мастер ' + state.master + ' не работает в ближайшие две недели 😔\nВыберите другого мастера:', [
+        { label: '👩‍🎨 Выбрать мастера', wide: true, action: chooseMaster },
+        { label: '← Главное меню', wide: true, action: mainMenu }
+      ], 700);
+      return;
+    }
+    botSay('На какой день вас записать? (показываю только рабочие дни мастера ' + state.master + ')', days.map(function (d) {
+      return {
+        label: d.today ? d.label + ' (сегодня)' : d.label,
+        action: function () { state.date = d; chooseTime(); }
+      };
+    }), 600);
+  }
+
+  function chooseTime() {
+    var slots = timeSlots(state.date.key, state.master);
+    if (slots[0] === '—') {
+      botSay('К сожалению, на ' + state.date.label + ' свободных окон нет 😔\nВыберите другой день:', [
+        { label: '← Выбрать дату', wide: true, action: chooseDate }
+      ], 700);
+      return;
+    }
+    botSay('Свободное время на ' + state.date.label + ':', slots.map(function (t) {
+      return {
+        label: '🕒 ' + t,
+        action: function () {
+          state.time = t;
+          if (state.rescheduleId) confirmBooking(); else askName();
+        }
+      };
+    }), 600);
+  }
+
+  function askName() {
+    botSay('Отлично! Как вас зовут?', null, 600);
+    awaitingInput = 'name';
+    input.focus();
+  }
+
+  function askPhone() {
+    botSay('Приятно познакомиться, ' + state.name + '! 😊\nОставьте номер телефона — администратор подтвердит запись:', null, 700);
+    awaitingInput = 'phone';
+    input.focus();
+  }
+
+  function confirmBooking() {
+    botSay(
+      'Проверьте детали записи:\n\n' +
+      '💎 Услуга: ' + state.service.name.replace(/^[^\s]+\s/, '') + '\n' +
+      '⭐ Мастер: ' + state.master + '\n' +
+      '📅 Дата: ' + state.date.label + '\n' +
+      '🕒 Время: ' + state.time + '\n' +
+      '💰 Стоимость: ' + fmtPrice(state.service.price) + '\n' +
+      '👤 Имя: ' + state.name + '\n' +
+      '📞 Телефон: ' + state.phone,
+      [
+        { label: '✅ Подтвердить запись', wide: true, ok: true, echoText: '✅ Подтверждаю', action: finishBooking },
+        { label: '↺ Заполнить заново', wide: true, action: function () { state = {}; chooseService(); } }
+      ], 900
+    );
+  }
+
+  var currentLead = null;      // заявка, ожидающая решения администратора
+  var bookings = [];           // все записи клиента (pending / confirmed / cancelled)
+  var bookingSeq = 1;
+
+  function findBooking(id) {
+    return bookings.find(function (b) { return b.id === id; }) || null;
+  }
+
+  function finishBooking() {
+    var isResched = !!state.rescheduleId;
+    var b;
+    if (isResched) {
+      b = findBooking(state.rescheduleId);
+      if (!b) { state.rescheduleId = null; return chooseService(); }
+      b.date = state.date.label;
+      b.dkey = state.date.key;
+      b.time = state.time;
+      b.status = 'pending';
+    } else {
+      b = {
+        id: bookingSeq++,
+        service: state.service.name.replace(/^[^\s]+\s/, ''),
+        price: state.service.price,
+        master: state.master,
+        date: state.date.label,
+        dkey: state.date.key,
+        time: state.time,
+        name: state.name,
+        phone: state.phone,
+        status: 'pending'
+      };
+      bookings.push(b);
+    }
+    state.rescheduleId = null;
+    currentLead = b;
+
+    /* гибрид: клиент сразу получает предварительную запись */
+    botSay(
+      isResched
+        ? 'Готово! 🎉\n\nЗапись перенесена на ' + b.date + ' в ' + b.time + ' (предварительно).\nАдминистратор подтвердит в течение 15 минут — пришлю сообщение.'
+        : 'Готово! 🎉\n\n' + b.name + ', вы предварительно записаны на ' + b.date + ' в ' + b.time + '.\n' +
+          '📍 ' + config.address + '\n\n' +
+          'Администратор подтвердит запись в течение 15 минут — я сразу пришлю сообщение. Если не ответим вовремя, запись подтвердится автоматически.\n\nУправлять записью можно в разделе «📋 Мои записи».',
+      [
+        { label: '📋 Мои записи', wide: true, action: showMyBookings },
+        { label: '← Главное меню', wide: true, action: mainMenu }
+      ], 1100
+    );
+
+    /* карточка в панели администратора */
+    var box = document.getElementById('leadBox');
+    box.textContent =
+      (isResched ? '↺ КЛИЕНТ ПЕРЕНЁС ЗАПИСЬ — ' : '🔔 НОВАЯ ЗАПИСЬ — ') + config.salon + '\n' +
+      '━━━━━━━━━━━━━━━\n' +
+      'Услуга: ' + b.service + '\n' +
+      'Мастер: ' + b.master + '\n' +
+      'Дата: ' + b.date + ', ' + b.time + '\n' +
+      'Клиент: ' + b.name + '\n' +
+      'Телефон: ' + b.phone + '\n' +
+      '━━━━━━━━━━━━━━━';
+    document.getElementById('leadTitle').className = 'lead-title show';
+    box.className = 'lead-box show';
+    setLeadStatus('pending', '⏳ Ожидает решения администратора (автоподтверждение через 15 мин)');
+    document.getElementById('leadActions').className = 'lead-actions show';
+    renderCalendar();
+  }
+
+  function setLeadStatus(kind, text) {
+    var s = document.getElementById('leadStatus');
+    s.textContent = text;
+    s.className = 'lead-status show ' + kind;
+  }
+
+  function closeLeadActions() {
+    document.getElementById('leadActions').className = 'lead-actions';
+  }
+
+  /* уведомление в панель администратора без кнопок */
+  function adminNotify(text, kind, statusText) {
+    var box = document.getElementById('leadBox');
+    box.textContent = text;
+    document.getElementById('leadTitle').className = 'lead-title show';
+    box.className = 'lead-box show';
+    setLeadStatus(kind, statusText);
+  }
+
+  /* ✅ администратор подтвердил — запись улетает в календарь */
+  function adminConfirm() {
+    if (!currentLead) return;
+    var b = currentLead;
+    currentLead = null;
+    b.status = 'confirmed';
+    closeLeadActions();
+    setLeadStatus('confirmed', '✅ Подтверждено и добавлено в Google Календарь');
+    renderCalendar();
+    botSay(
+      '✅ Администратор подтвердил вашу запись!\n\n' +
+      '💎 ' + b.service + ' · мастер ' + b.master + '\n' +
+      '📅 ' + b.date + ' в ' + b.time + '\n' +
+      '📍 ' + config.address + '\n\n' +
+      'За 3 часа до визита пришлю напоминание. Отменить или перенести запись можно в разделе «📋 Мои записи».',
+      [
+        { label: '📋 Мои записи', wide: true, action: showMyBookings },
+        { label: '← Главное меню', wide: true, action: mainMenu }
+      ], 800
+    );
+  }
+
+  /* ↺ администратор просит перенести (заявка ещё не подтверждена) */
+  function adminMove() {
+    if (!currentLead) return;
+    var lead = currentLead;
+    currentLead = null;
+    lead.status = 'cancelled';
+    closeLeadActions();
+    setLeadStatus('moved', '↺ Администратор предложил перенести запись');
+    renderCalendar();
+    botSay(
+      'К сожалению, на ' + lead.date + ' в ' + lead.time + ' мастер ' + lead.master + ' не сможет вас принять 😔\n' +
+      'Подберём другое удобное время?',
+      [
+        { label: '📅 Выбрать другое время', wide: true, ok: true, action: function () {
+          state.service = config.services.find(function (s) { return s.name.replace(/^[^\s]+\s/, '') === lead.service; }) || state.service;
+          state.master = lead.master;
+          chooseDate();
+        } },
+        { label: '← Главное меню', wide: true, action: mainMenu }
+      ], 800
+    );
+  }
+
+  /* ❌ администратор отклонил заявку */
+  function adminCancel() {
+    if (!currentLead) return;
+    var lead = currentLead;
+    currentLead = null;
+    lead.status = 'cancelled';
+    closeLeadActions();
+    setLeadStatus('cancelled', '❌ Заявка отклонена администратором');
+    renderCalendar();
+    botSay(
+      'К сожалению, запись на ' + lead.date + ' в ' + lead.time + ' недоступна 😔\n' +
+      'Администратор свяжется с вами по номеру ' + lead.phone + ', чтобы подобрать удобное время. Или выберите другой день прямо сейчас:',
+      [
+        { label: '📅 Записаться на другой день', wide: true, ok: true, action: chooseService },
+        { label: '← Главное меню', wide: true, action: mainMenu }
+      ], 800
+    );
+  }
+
+  /* ❌ администратор отменяет УЖЕ ПОДТВЕРЖДЁННУЮ запись из календаря */
+  function adminCancelConfirmed(id) {
+    var b = findBooking(id);
+    if (!b) return;
+    b.status = 'cancelled';
+    renderCalendar();
+    adminNotify(
+      '❌ ЗАПИСЬ ОТМЕНЕНА АДМИНИСТРАТОРОМ\n' +
+      '━━━━━━━━━━━━━━━\n' +
+      'Услуга: ' + b.service + '\n' +
+      'Дата: ' + b.date + ', ' + b.time + '\n' +
+      'Клиент: ' + b.name + '\n' +
+      'Телефон: ' + b.phone + '\n' +
+      '━━━━━━━━━━━━━━━\n' +
+      'Клиент получил уведомление об отмене',
+      'cancelled', '❌ Запись отменена — клиент уведомлён'
+    );
+    botSay(
+      'К сожалению, администратор вынужден отменить вашу запись на ' + b.date + ' в ' + b.time + ' 😔\n' +
+      'Мы перезвоним на номер ' + b.phone + ', чтобы извиниться и подобрать другое время. Или запишитесь сами — это займёт полминуты:',
+      [
+        { label: '📅 Записаться снова', wide: true, ok: true, action: chooseService },
+        { label: '← Главное меню', wide: true, action: mainMenu }
+      ], 900
+    );
+  }
+
+  /* 📋 клиент: список своих записей с управлением */
+  function showMyBookings() {
+    var active = bookings.filter(function (b) { return b.status !== 'cancelled'; });
+    if (!active.length) {
+      botSay('У вас пока нет активных записей.', [
+        { label: '📅 Записаться', wide: true, ok: true, action: chooseService },
+        { label: '← Главное меню', wide: true, action: mainMenu }
+      ], 700);
+      return;
+    }
+    var lines = active.map(function (b, i) {
+      return (i + 1) + '. ' + b.service + ' · мастер ' + b.master + '\n📅 ' + b.date + ', ' + b.time +
+        (b.status === 'pending' ? ' · ⏳ ждёт подтверждения' : ' · ✅ подтверждена');
+    });
+    botSay('Ваши записи:\n\n' + lines.join('\n\n'), null, 700);
+    setTimeout(function () {
+      active.forEach(function (b) {
+        addButtons([
+          { label: '↺ Перенести: ' + b.service + ' (' + b.time + ')', wide: true,
+            echoText: '↺ Перенести запись ' + b.date + ', ' + b.time,
+            action: function () { clientMoveBooking(b.id); } },
+          { label: '❌ Отменить: ' + b.service + ' (' + b.time + ')', wide: true,
+            echoText: '❌ Отменить запись ' + b.date + ', ' + b.time,
+            action: function () { clientCancelBooking(b.id); } }
+        ]);
+      });
+      addButtons([{ label: '← Главное меню', wide: true, action: mainMenu }]);
+    }, 950);
+  }
+
+  /* ❌ клиент отменяет свою запись */
+  function clientCancelBooking(id) {
+    var b = findBooking(id);
+    if (!b) return;
+    b.status = 'cancelled';
+    if (currentLead && currentLead.id === id) { currentLead = null; closeLeadActions(); }
+    renderCalendar();
+    adminNotify(
+      '❌ КЛИЕНТ ОТМЕНИЛ ЗАПИСЬ\n' +
+      '━━━━━━━━━━━━━━━\n' +
+      'Услуга: ' + b.service + '\n' +
+      'Дата: ' + b.date + ', ' + b.time + '\n' +
+      'Клиент: ' + b.name + '\n' +
+      'Телефон: ' + b.phone + '\n' +
+      '━━━━━━━━━━━━━━━\n' +
+      'Окно ' + b.date + ', ' + b.time + ' освободилось и снова доступно для записи',
+      'cancelled', '❌ Клиент отменил запись — окно освободилось'
+    );
+    botSay(
+      'Ваша запись на ' + b.date + ' в ' + b.time + ' отменена.\n' +
+      'Окно освобождено и сразу стало доступно другим клиентам. Будем рады видеть вас снова! 🌷',
+      [
+        { label: '📅 Записаться снова', wide: true, ok: true, action: chooseService },
+        { label: '← Главное меню', wide: true, action: mainMenu }
+      ], 800
+    );
+  }
+
+  /* ↺ клиент переносит свою запись */
+  function clientMoveBooking(id) {
+    var b = findBooking(id);
+    if (!b) return;
+    state.rescheduleId = id;
+    state.service = config.services.find(function (s) { return s.name.replace(/^[^\s]+\s/, '') === b.service; }) ||
+      { name: '💎 ' + b.service, price: b.price, dur: 60 };
+    state.master = b.master;
+    state.name = b.name;
+    state.phone = b.phone;
+    botSay(
+      'Переносим запись «' + b.service + '» (сейчас: ' + b.date + ', ' + b.time + ').\nВыберите новый день:',
+      [
+        { label: '📅 Выбрать день', wide: true, ok: true, action: chooseDate }
+      ], 700
+    );
+  }
+
+  /* 📆 перерисовка «Google Календаря»: только подтверждённые записи */
+  function renderCalendar() {
+    var wrap = document.getElementById('calEvents');
+    wrap.innerHTML = '';
+    var active = bookings.filter(function (b) { return b.status === 'confirmed'; });
+    document.getElementById('calEmpty').style.display = active.length ? 'none' : 'block';
+    active.slice().reverse().forEach(function (b) {
+      var ev = document.createElement('div');
+      ev.className = 'cal-event';
+      ev.innerHTML =
+        '<div class="cal-title">' + b.service + ' — ' + b.name + '</div>' +
+        '<div class="cal-meta">📅 ' + b.date + ', ' + b.time + ' · ⭐ ' + b.master + '</div>' +
+        '<div class="cal-meta">📞 ' + b.phone + ' · 💰 ' + fmtPrice(b.price) + '</div>' +
+        '<span class="cal-badge">✅ подтверждено ботом</span>';
+      var btn = document.createElement('button');
+      btn.className = 'cal-cancel';
+      btn.textContent = '❌ Отменить запись';
+      btn.addEventListener('click', function () { adminCancelConfirmed(b.id); });
+      ev.appendChild(btn);
+      wrap.appendChild(ev);
+    });
+  }
+
+  document.getElementById('leadConfirm').addEventListener('click', adminConfirm);
+  document.getElementById('leadMove').addEventListener('click', adminMove);
+  document.getElementById('leadCancel').addEventListener('click', adminCancel);
+
+  /* ================= SCHEDULE (график мастеров) ================= */
+  var schedule = {};  // schedule[master][dateKey] = false → выходной (по умолчанию все дни рабочие)
+  var schedCursor = new Date(); schedCursor.setDate(1);
+  var moNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+  function dateKeyY(y, m, d) {
+    return y + '-' + ('0' + (m + 1)).slice(-2) + '-' + ('0' + d).slice(-2);
+  }
+
+  function isWorkDay(master, key) {
+    if (master === 'Любой мастер') {
+      return config.masters.some(function (m) { return m !== 'Любой мастер' && isWorkDay(m, key); });
+    }
+    var row = schedule[master];
+    return !(row && row[key] === false);
+  }
+
+  function renderSched() {
+    var sel = document.getElementById('schedMaster');
+    var master = sel.value;
+    document.getElementById('schedMonth').textContent = moNames[schedCursor.getMonth()] + ' ' + schedCursor.getFullYear();
+    var grid = document.getElementById('schedGrid');
+    grid.innerHTML = '';
+    ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].forEach(function (w) {
+      var el = document.createElement('div');
+      el.className = 'wd'; el.textContent = w;
+      grid.appendChild(el);
+    });
+    var y = schedCursor.getFullYear(), mo = schedCursor.getMonth();
+    var offset = (new Date(y, mo, 1).getDay() + 6) % 7;
+    for (var i = 0; i < offset; i++) {
+      var e = document.createElement('div');
+      e.className = 'day empty';
+      grid.appendChild(e);
+    }
+    var t = new Date();
+    var tk = dateKeyY(t.getFullYear(), t.getMonth(), t.getDate());
+    var daysIn = new Date(y, mo + 1, 0).getDate();
+    for (var d = 1; d <= daysIn; d++) {
+      (function (d) {
+        var key = dateKeyY(y, mo, d);
+        var work = isWorkDay(master, key);
+        var cell = document.createElement('div');
+        cell.className = 'day' + (work ? '' : ' off') + (key < tk ? ' past' : '') + (key === tk ? ' today' : '');
+        cell.textContent = d;
+        cell.title = key + ' — ' + (work ? 'рабочий' : 'выходной');
+        if (key >= tk) {
+          cell.addEventListener('click', function () {
+            if (!schedule[master]) schedule[master] = {};
+            schedule[master][key] = !work;
+            renderSched();
+          });
+        }
+        grid.appendChild(cell);
+      })(d);
+    }
+  }
+
+  (function initSched() {
+    var sel = document.getElementById('schedMaster');
+    config.masters.filter(function (m) { return m !== 'Любой мастер'; }).forEach(function (m) {
+      var o = document.createElement('option');
+      o.value = m; o.textContent = m;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change', renderSched);
+    document.getElementById('schedPrev').addEventListener('click', function () {
+      schedCursor.setMonth(schedCursor.getMonth() - 1);
+      renderSched();
+    });
+    document.getElementById('schedNext').addEventListener('click', function () {
+      schedCursor.setMonth(schedCursor.getMonth() + 1);
+      renderSched();
+    });
+    renderSched();
+  })();
+
+  /* free-text intents */
+  function handleText(text) {
+    var t = text.trim();
+    if (!t) return;
+    addMsg(t, 'user');
+    input.value = '';
+
+    if (awaitingInput === 'name') {
+      state.name = t.replace(/[<>&"']/g, '').slice(0, 40) || 'Гость';
+      awaitingInput = null;
+      askPhone();
+      return;
+    }
+    if (awaitingInput === 'phone') {
+      state.phone = t.replace(/[<>&"']/g, '').slice(0, 25);
+      awaitingInput = null;
+      confirmBooking();
+      return;
+    }
+
+    var low = t.toLowerCase();
+    if (/(отмен|перенес|мои записи|моя запись)/.test(low)) {
+      showMyBookings();
+      return;
+    }
+    if (/(запис|хочу|стриж|маникюр|окраш|педикюр|массаж)/.test(low)) {
+      chooseService();
+      return;
+    }
+    if (/(цен|стоимость|прайс|сколько)/.test(low)) { showPrices(); return; }
+    if (/(адрес|где|контакт|телефон)/.test(low)) { showContacts(); return; }
+    if (/(привет|здравств|добрый|start|начать)/.test(low)) { mainMenu(); return; }
+
+    botSay('Я пока учусь понимать свободный текст 🙂\nЛучше воспользуйтесь кнопками ниже:', [
+      { label: '📅 Записаться', wide: true, ok: true, action: chooseService },
+      { label: '← Главное меню', wide: true, action: mainMenu }
+    ], 700);
+  }
+
+  document.getElementById('sendBtn').addEventListener('click', function () { if (!busy) handleText(input.value); });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !busy) handleText(input.value);
+  });
+
+  document.getElementById('restartBtn').addEventListener('click', start);
+
+  document.getElementById('applyCfg').addEventListener('click', function () {
+    var s = document.getElementById('cfgSalon').value.trim();
+    var a = document.getElementById('cfgAddr').value.trim();
+    if (s) {
+      config.salon = 'Салон «' + s.replace(/[«»]/g, '') + '»';
+      document.getElementById('salonName').textContent = config.salon + ' — бот записи';
+      document.getElementById('avatarLetter').textContent = s.charAt(0).toUpperCase();
+    }
+    if (a) config.address = a;
+    start();
+  });
+
+  /* init */
+  if (q.get('salon')) {
+    var nm = q.get('salon').replace(/[«»]/g, '');
+    document.getElementById('salonName').textContent = config.salon + ' — бот записи';
+    document.getElementById('avatarLetter').textContent = nm.charAt(0).toUpperCase();
+    document.getElementById('cfgSalon').value = nm;
+  }
+  if (q.get('addr')) document.getElementById('cfgAddr').value = q.get('addr');
+
+  start();
+})();
+</script>
+</body>
+</html>
